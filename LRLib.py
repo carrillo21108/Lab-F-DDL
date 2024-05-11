@@ -1,0 +1,339 @@
+﻿#LRLib.py
+import pickle
+from graphviz import Digraph
+from tabulate import tabulate
+
+#Clase de estado de LR Automata
+class LRAutomataState:
+    def __init__(self,afd,canonicalSet=set()):
+        self.name = afd.state_counter
+
+        #Modificacion de state_counter y states de la instancia de AFD dada
+        afd.state_counter = afd.state_counter[0]+str(int(afd.state_counter[1:]) + 1)
+        afd.states.add(self)
+
+        self.canonicalSet = canonicalSet
+
+        self.transitions = {}
+        self.is_accept = False
+
+#Clase LRAutomata
+class LRAutomata:
+    def __init__(self):
+        self.start = None
+        self.accept = set()
+        self.states = set()
+        self.state_counter = 'I'+str(0)
+
+# Funcion para representar un item en forma de string
+def represent_item(item):
+    value = list(item[1])
+    position = item[2]
+
+    value.insert(position,'.')
+
+    production = item[0] + ' → '
+    production += ' '.join(value)
+
+    return production
+
+#Funcion para aumentar una gramatica
+def augment_grammar(grammar):
+    new_grammar = {}
+
+    simbolo_inicial = next(iter(grammar))
+    new_simbolo_inicial = simbolo_inicial + '`'
+    new_grammar[new_simbolo_inicial] = [simbolo_inicial]
+
+    new_grammar.update(grammar)
+    return new_grammar
+
+# Cerradura de un conjunto de items
+def closure(I,grammar):
+    J = I
+
+    while True:
+        new_items = set()
+        for head, body, indice_punto in J:
+            if indice_punto < len(body):  # Verificacion de posicion del punto antes del final
+                simbolo = body[indice_punto]
+                # Si el simbolo es un no terminal, se agregan las producciones
+                if simbolo in set(grammar.keys()):
+                    for production in grammar[simbolo]:
+                        item = (simbolo, tuple(production.split(' ')), 0)  # Punto al inicio
+                        if item not in J:
+                            new_items.add(item)
+        if not new_items:
+            break  # Finalizacion cuando no hay nuevos items
+        J.update(new_items)
+
+    return J
+
+# Funcion GOTO
+def goto(I,X,grammar):
+    res = set()
+    for head, body, indice_punto in I:
+        if indice_punto < len(body):  # Verificacion de posicion del punto antes del final
+            simbolo = body[indice_punto]
+            if simbolo == X:
+                res = res.union(closure({(head,body,indice_punto+1)},grammar))
+    
+    return res
+
+# Funcion para simbolos gramaticales
+def getGrammarSymbols(grammar):
+    grammar_symbols = set(grammar.keys())
+
+    for value in grammar.values():
+        for prod in value:
+            grammar_symbols = grammar_symbols.union(set(prod.split(' ')))
+            
+    return grammar_symbols
+
+# Generacion de automata
+def generate_LR0Automata(grammar):
+    automata  = LRAutomata()
+    
+    grammar_symbols = getGrammarSymbols(grammar)    
+    
+    simbolo = next(iter(grammar))
+
+    res = closure({(simbolo,tuple(grammar[simbolo][0].split(' ')),0)},grammar)
+    initial_state = LRAutomataState(automata,res)
+    automata.start = initial_state
+
+    C = {initial_state}
+    
+    while True:
+        new_states = set()
+
+        for state in C:
+            for X in grammar_symbols:
+                res = goto(state.canonicalSet,X,grammar)
+
+                if len(res)>0:
+                    if res not in [state.canonicalSet for state in C]:
+                        new_state = LRAutomataState(automata,res)
+                        new_states.add(new_state)
+                        state.transitions[X] = [new_state]
+
+                        if (simbolo,tuple(grammar[simbolo][0].split(' ')),1) in new_state.canonicalSet:
+                            new_state.is_accept = True
+                            automata.accept.add(new_state)
+                    else:
+                        for stock_state in C:
+                            if res == stock_state.canonicalSet:
+                                state.transitions[X] = [stock_state]
+
+        if not new_states:
+            break  # Finalizacion cuando no hay nuevos estados
+        C.update(new_states)
+
+    return automata
+
+# Plot Automata LR
+def plot_af(state, graph=None, visited=None):
+    if visited is None:
+        visited = set()
+
+    if state in visited:
+        return graph
+
+    if graph is None:
+        graph = Digraph(engine='dot')
+
+    label = state.name+'\n'
+    for item in state.canonicalSet:
+        label += represent_item(item)+'\n'
+
+    label = label[:-1]
+    
+    if state.is_accept:
+        graph.node(name=str(id(state)), label=label, shape='box', color="green", fontsize='10')
+        graph.node(name="accept", label="accept", shape='plaintext', fontsize='10')
+        graph.edge(str(id(state)), "accept", label="$", fontsize='10')
+
+        if len(visited)==0:
+             graph.node(name="start", label="start", shape='point', fontsize='10')
+             graph.edge("start", str(id(state)), label="inicio", fontsize='10')
+    elif len(visited)==0:
+        graph.node(name="start", label="start", shape='point', fontsize='10')
+        graph.node(name=str(id(state)), label=label, shape='box', color="blue", fontsize='10')
+        graph.edge("start", str(id(state)), label="inicio", fontsize='10')
+    else:
+        graph.node(name=str(id(state)), label=label, shape='box', fontsize='10')
+        
+    visited.add(state)
+
+    for symbol, next_states in state.transitions.items():
+        for next_state in next_states:
+            graph.edge(str(id(state)), str(id(next_state)), label=symbol, fontsize='10')
+            plot_af(next_state, graph, visited)
+
+    return graph
+
+
+#Funcion FIRST para un simbolo gramatical
+def first(symbol,grammar):
+    firstSet = set()
+    
+    # Si el simbolo es un terminal
+    if symbol not in set(grammar.keys()):
+        firstSet.add(symbol)
+    # Si el simbolo es un no terminal
+    elif symbol in set(grammar.keys()):
+        for prod in grammar[symbol]:
+            symbols = prod.split(' ')
+            for i in range(0,len(symbols)):
+                res = first(symbols[i],grammar)
+                if '' not in res:
+                    firstSet.update(res)
+                    break
+                elif i==len(symbols)-1:
+                    firstSet.add('')
+    # Si el simbolo es vacio
+    else:
+        firstSet.add('')
+        
+    return firstSet
+
+#Funcion FIRST para una cadena
+def firstString(symbols,grammar):
+    firstSet = set()
+    
+    symbols = symbols.split(' ')
+    for i in range(0,len(symbols)):
+        res = first(symbols[i],grammar)
+        if i==0 or '' not in res:
+            firstSet.update(res)
+        elif i==len(symbols)-1:
+            firstSet.add('')
+            
+    return firstSet
+
+#Funcion FOLLOW para un no terminal
+def follow(non_terminal,grammar):
+        #Validacion    
+        if non_terminal not in set(grammar.keys()):
+            return None
+        
+        followSet = set()    
+        simbolo_inicial = next(iter(grammar))
+        
+        if non_terminal == simbolo_inicial:
+            followSet.add('$')
+            
+        for head,prods in grammar.items():
+            for prod in prods:
+                prod = prod.split(' ')
+                for i in range(0,len(prod)):
+                    if non_terminal==prod[i]:
+                        if i<len(prod)-1:
+                            firstSet = first(prod[i+1],grammar)
+                            if '' in firstSet:
+                                if head!=non_terminal:
+                                    followSet.update(follow(head,grammar))
+                                    
+                                firstSet.remove('')
+                                
+                            followSet.update(firstSet)
+                        else:
+                            if head!=non_terminal:
+                                    followSet.update(follow(head,grammar))
+                            
+        return followSet
+
+def getNonTerminals(grammar):
+    non_terminals = set(grammar.keys())
+    firstSymbol = next(iter(grammar))
+    non_terminals.remove(firstSymbol)
+    
+    return non_terminals
+
+#Funcion para generacion de Tabla de Parseo SLR
+def generate_SLRTable():
+    with open('grammar.pkl', 'rb') as archivo_entrada:
+        grammar = pickle.load(archivo_entrada)
+        
+    grammar = augment_grammar(grammar)
+    
+    automata = generate_LR0Automata(grammar)
+    automata_graph = plot_af(automata.start)
+    nombre_archivo_pdf = 'Automata LR'
+    automata_graph.view(filename=nombre_archivo_pdf,cleanup=True)
+
+    grammar_symbols = getGrammarSymbols(grammar)
+    non_terminals = getNonTerminals(grammar)
+    terminals = grammar_symbols.difference(non_terminals)
+    terminals.add('$')
+    terminals.remove(next(iter(grammar)))
+    
+    parsing_table = goto_transitions(automata,non_terminals)
+    accept_transitions(automata,parsing_table)
+    
+    if action_transitions(automata,parsing_table,terminals,grammar):
+        return parsing_table
+    else:
+        return None
+
+#Funcion para definir los valores GOTO de la tabla SLR    
+def goto_transitions(automata,non_terminals):
+    parsing_table = dict()
+    
+    for state in automata.states:
+        parsing_table[state.name] = dict()
+        for symbol in non_terminals:
+            if symbol in state.transitions:
+                nextState = state.transitions[symbol][0]
+                parsing_table[state.name][symbol] = nextState.name
+            else:
+                parsing_table[state.name][symbol] = None
+        
+    return parsing_table
+
+#Funcion para definir aceptacion
+def accept_transitions(automata,parsing_table):
+    for state in automata.states:
+        if state in automata.accept:
+            parsing_table[state.name]['$'] = "acc"
+        else:
+            parsing_table[state.name]['$'] = None
+            
+#Funcion para definir los valores ACTION de la tabla SLR
+def action_transitions(automata,parsing_table,terminals,grammar):
+    rules = []
+    for prods in grammar.values():
+        rules.extend(prods)
+        
+    for state in automata.states:
+        for symbol in terminals:
+            if symbol in state.transitions:
+                nextState = state.transitions[symbol][0]
+                parsing_table[state.name][symbol] = 's'+nextState.name
+            else:
+                parsing_table[state.name][symbol] = None
+                
+        for head, body, indice_punto in state.canonicalSet:
+            if indice_punto==len(body) and head!=next(iter(grammar)):
+                values = follow(head,grammar)
+                index = rules.index(' '.join(body))
+                
+                for symbol in values:
+                    if parsing_table[state.name][symbol] == None:
+                        parsing_table[state.name][symbol] = 'r'+str(index)
+                    else:
+                        print("ERROR: Conflicto shif-reduce en la gramatica")
+                        return False
+                    
+    return True
+
+def print_parsing_table(parsing_table):
+    # Crear los encabezados de la tabla extrayendo las llaves de cualquier estado (elegimos el estado 0 como ejemplo)
+    headers = ["State"] + list(parsing_table['I0'].keys())
+    # Preparar las filas de la tabla incluyendo el numero de estado
+    table = []
+    for state, actions in parsing_table.items():
+        row = [state] + list(actions.values())
+        table.append(row)
+    # Imprimir la tabla
+    print(tabulate(table, headers=headers, tablefmt="grid"))
