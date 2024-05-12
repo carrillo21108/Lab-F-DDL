@@ -185,12 +185,16 @@ def first(symbol,grammar):
         for prod in grammar[symbol]:
             symbols = prod.split(' ')
             for i in range(0,len(symbols)):
-                res = first(symbols[i],grammar)
-                if '' not in res:
-                    firstSet.update(res)
+                # Si es una produccion recursiva, se descarta
+                if symbols[i]!= symbol:
+                    res = first(symbols[i],grammar)
+                    if '' not in res:
+                        firstSet.update(res)
+                        break
+                    elif i==len(symbols)-1:
+                        firstSet.add('')
+                else:
                     break
-                elif i==len(symbols)-1:
-                    firstSet.add('')
     # Si el simbolo es vacio
     else:
         firstSet.add('')
@@ -231,6 +235,7 @@ def follow(non_terminal,grammar):
                         if i<len(prod)-1:
                             firstSet = first(prod[i+1],grammar)
                             if '' in firstSet:
+                                # Verificacion para recursividad
                                 if head!=non_terminal:
                                     followSet.update(follow(head,grammar))
                                     
@@ -238,6 +243,7 @@ def follow(non_terminal,grammar):
                                 
                             followSet.update(firstSet)
                         else:
+                            # Verificacion para recursividad
                             if head!=non_terminal:
                                     followSet.update(follow(head,grammar))
                             
