@@ -2,6 +2,58 @@
 import pickle
 from graphviz import Digraph
 from tabulate import tabulate
+from abc import ABC, abstractmethod
+
+# Definir la interfaz
+class QueueInterface(ABC):
+    @abstractmethod
+    def empty(self):
+        pass
+    
+    @abstractmethod
+    def first(self):
+        pass
+    
+    @abstractmethod
+    def remove_first(self):
+        pass
+    
+    @abstractmethod
+    def insert(self,item):
+        pass
+
+# Clase Padre que implementa la interfaz
+class Queue(QueueInterface):
+    def __init__(self):
+       self.content = []         
+
+    def empty(self):
+        return len(self.content)==0
+        
+    def first(self):
+        if not self.empty():
+            return self.content[0]
+        
+    def remove_first(self):
+        item = self.first()
+        if item:
+            self.content.pop(0)
+            return item
+        
+    def insert(self,item):
+        pass
+    
+#Clase Hija FIFO
+class Fifo(Queue):
+    def insert(self,item):
+        self.content.append(item)
+        return self.content
+    
+#Clase Hija LIFO
+class Stack(Queue):
+    def insert(self,item):
+        self.content.insert(0,item)
+        return self.content
 
 #Clase de estado de LR Automata
 class LRAutomataState:
@@ -249,19 +301,14 @@ def follow(non_terminal,grammar):
                             
         return followSet
 
+#Funcion para obtencion de no terminales
 def getNonTerminals(grammar):
     non_terminals = set(grammar.keys())
-    firstSymbol = next(iter(grammar))
-    non_terminals.remove(firstSymbol)
     
     return non_terminals
 
 #Funcion para generacion de Tabla de Parseo SLR
-def generate_SLRTable():
-    with open('grammar.pkl', 'rb') as archivo_entrada:
-        grammar = pickle.load(archivo_entrada)
-        
-    grammar = augment_grammar(grammar)
+def generate_SLRTable(grammar):
     
     automata = generate_LR0Automata(grammar)
     automata_graph = plot_af(automata.start)
@@ -269,10 +316,12 @@ def generate_SLRTable():
     automata_graph.view(filename=nombre_archivo_pdf,cleanup=True)
 
     grammar_symbols = getGrammarSymbols(grammar)
+    grammar_symbols.remove(next(iter(grammar)))
+    
     non_terminals = getNonTerminals(grammar)
+    non_terminals.remove(next(iter(grammar)))
+    
     terminals = grammar_symbols.difference(non_terminals)
-    terminals.add('$')
-    terminals.remove(next(iter(grammar)))
     
     parsing_table = goto_transitions(automata,non_terminals)
     accept_transitions(automata,parsing_table)
@@ -304,12 +353,19 @@ def accept_transitions(automata,parsing_table):
             parsing_table[state.name]['$'] = "acc"
         else:
             parsing_table[state.name]['$'] = None
+
+#Funcion para obtener las reglas de una gramatica
+def getRules(grammar):
+    rules = []
+    for head,bodies in grammar.items():
+        for body in bodies:
+            rules.append(head+' -> '+body)
+        
+    return rules
             
 #Funcion para definir los valores ACTION de la tabla SLR
 def action_transitions(automata,parsing_table,terminals,grammar):
-    rules = []
-    for prods in grammar.values():
-        rules.extend(prods)
+    rules = getRules(grammar)
         
     for state in automata.states:
         for symbol in terminals:
@@ -322,7 +378,7 @@ def action_transitions(automata,parsing_table,terminals,grammar):
         for head, body, indice_punto in state.canonicalSet:
             if indice_punto==len(body) and head!=next(iter(grammar)):
                 values = follow(head,grammar)
-                index = rules.index(' '.join(body))
+                index = rules.index(head+' -> '+' '.join(body))
                 
                 for symbol in values:
                     if parsing_table[state.name][symbol] == None:
@@ -333,6 +389,7 @@ def action_transitions(automata,parsing_table,terminals,grammar):
                     
     return True
 
+#Funcion para impresion de la tabla de parseo SLR
 def print_parsing_table(parsing_table):
     # Crear los encabezados de la tabla extrayendo las llaves de cualquier estado (elegimos el estado 0 como ejemplo)
     headers = ["State"] + list(parsing_table['I0'].keys())
@@ -343,3 +400,36 @@ def print_parsing_table(parsing_table):
         table.append(row)
     # Imprimir la tabla
     print(tabulate(table, headers=headers, tablefmt="grid"))
+    
+
+#Algoritmo de Parseo LR
+def LRParsing(grammar,parsing_table,input_value):
+    stack = Stack()
+    stack.insert('I0')
+    symbols = ""
+    input_value.insert('$')
+    
+    rules = getRules(grammar)
+    
+    while True:
+        action = parsing_table[stack.first()][input_value.first()]
+        if action==None:
+            print("ERROR SINTACTICO. CADENA NO ACEPTADA")
+            break;
+        elif action[0]=='s':
+            stack.insert(action[1:])
+            symbols=input_value.remove_first()
+        elif action[0]=='r':
+            prod = rules[int(action[1])].split(' -> ')
+            head = prod[0]
+            body = prod[1].split(' ')
+            
+            for i in range(len(body)):
+                stack.remove_first()
+            
+            stack.insert(parsing_table[stack.first()][head])
+            symbols=head
+        elif action=="acc":
+            print("-- CADENA ACEPTADA --")
+            break;
+
