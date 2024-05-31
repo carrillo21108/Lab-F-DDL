@@ -7,9 +7,9 @@ if __name__ == "__main__":
     contenido = f"""#Parser.py
 # Este es un archivo Python generado automaticamente
 import pickle
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), 'parser'))
+# import sys
+# import os
+# sys.path.append(os.path.join(os.path.dirname(__file__), 'parser'))
 
 import LRLib
 
