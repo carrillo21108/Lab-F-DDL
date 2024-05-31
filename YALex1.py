@@ -1,29 +1,7 @@
-#ScanFrame.py
-
-import ScanGenerator
-# import sys
-# import os
-# sys.path.append(os.path.join(os.path.dirname(__file__), '../resources'))
-
-import AfLib
-
-if __name__ == "__main__":
-
-    name = input("Ingrese el nombre del archivo yal a reconocer: ")
-    yalName = name+".yal"
-    pklName = name+".pkl"
-    pyName = name+".py"
-    res = ScanGenerator.generateLexer(pklName,yalName)
-
-    if res:
-        header = res.get_actions()[0][1:-1] if len(res.get_actions())>0 else ""
-        trailer = res.get_actions()[1][1:-1] if len(res.get_actions())>1 else ""
-        
-        # Definir el contenido del nuevo archivo Python Scan.py
-        contenido = f"""#Scan.py
+#Scan.py
 # Este es un archivo Python generado automaticamente
 import pickle
-{header}
+#Diego Franco - 20240
             
 def step_simulate_AFD(lexer,c,lookAhead):
     res = lexer.afd.step_simulation(c, lookAhead)
@@ -60,15 +38,15 @@ def segmentRecognize(lexer,i,content):
         i += 1  # Incrementa la posicion para el proximo caracter
         
 def genericFunction(value,content):
-    local_namespace = {{}}
+    local_namespace = {}
     local_namespace['value'] = value
 
-    codigo_funcion = f'def tempFunction(value):\\n'
+    codigo_funcion = f'def tempFunction(value):\n'
     if len(content)>0:
-        for linea in content.split('\\n'):
-            codigo_funcion += f'    {{linea}}\\n'
+        for linea in content.split('\n'):
+            codigo_funcion += f'    {linea}\n'
     else:
-        codigo_funcion += f'    return None\\n'
+        codigo_funcion += f'    return None\n'
         
     codigo_funcion += 'resultado = tempFunction(value)'
     
@@ -80,7 +58,7 @@ def genericFunction(value,content):
         return local_namespace['resultado']
         
     except Exception as e:
-        print(f"Error al ejecutar el codigo: {{e}}")
+        print(f"Error al ejecutar el codigo: {e}")
         return None
             
 def tokensRecognize(lexer,txtContent):
@@ -97,13 +75,13 @@ def tokensRecognize(lexer,txtContent):
             resultado = resultado if resultado!=None else ""
             print(resultado)
         elif not res[0] and first!=len(txtContent):
-            message = f"-- ERROR LEXICO -- al reconocer archivo txt en caracter no. {{res[1]+1}}: "
+            message = f"-- ERROR LEXICO -- al reconocer archivo txt en caracter no. {res[1]+1}: "
             posicion = ' '*len(message)
             for item in txtContent[first:res[1]]:
-                if item=='\\n':
-                    posicion+='\\n'
-                elif item=='\\t':
-                    posicion+='\\t'
+                if item=='\n':
+                    posicion+='\n'
+                elif item=='\t':
+                    posicion+='\t'
                 else:
                     posicion+=' '
                     
@@ -117,7 +95,7 @@ def tokensRecognize(lexer,txtContent):
         first = nextFirst
 
 #Lectura del objeto pkl
-with open('{pklName}', 'rb') as archivo_entrada:
+with open('YALex1.pkl', 'rb') as archivo_entrada:
     lexer = pickle.load(archivo_entrada)
 
 lexer.input_tokens = []
@@ -130,21 +108,10 @@ tokensRecognize(lexer,txtContent)
 
 #Actualizacion de input_tokens
 if len(lexer.input_tokens)>0:
+    print(lexer.input_tokens)
     # Abrimos un archivo en modo binario de escritura
-    with open('{pklName}', 'wb') as archivo_salida:
+    with open('YALex1.pkl', 'wb') as archivo_salida:
         # Serializamos el objeto y lo guardamos en el archivo
         pickle.dump(lexer, archivo_salida)
         
-{trailer}
-"""
-
-
-        # Especificar el nombre del archivo que deseas crear
-        nombre_archivo = pyName
-
-        # Abrir el archivo para escritura
-        with open(nombre_archivo, 'w') as archivo:
-            # Escribir el contenido al archivo
-            archivo.write(contenido)
-
-        print(f'Archivo {nombre_archivo} generado con exito.')
+#Diego Franco - 20240
