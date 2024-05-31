@@ -1,6 +1,10 @@
 ﻿#ScanGenerator.py
 
 from graphviz import Digraph
+# import sys
+# import os
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../resources'))
+
 from YalexLib import YalexRecognizer
 import AfdLib
 import AfLib
@@ -9,6 +13,14 @@ import RegexLib
 from AstLib import Node
 
 import pickle
+
+
+#Clase Lexer
+class Lexer:
+    def __init__(self,afd,yalex_tokens,input_tokens=[]):
+        self.afd = afd
+        self.yalex_tokens = yalex_tokens
+        self.input_tokens = input_tokens
 
 def generateLexer(pklName,file_path):
     definitions_id = []
@@ -22,14 +34,6 @@ def generateLexer(pklName,file_path):
         yalexContent = file.read()  # Leer todo el contenido del archivo
     
     if yalexRecognizer.yalexRecognize(yalexContent):
-        # print(yalexRecognizer.get_comments())
-        # print('\n')
-        # print(yalexRecognizer.get_definitions())
-        # print('\n')
-        # print(yalexRecognizer.get_rule_tokens())
-        # print('\n')
-        # print(yalexRecognizer.get_actions())
-        # print('\n')
     
 
         for key in yalexRecognizer.get_rule_tokens():
@@ -64,47 +68,18 @@ def generateLexer(pklName,file_path):
         print(tokens_regex)
         print(yalex_tokens)
 
-        # k=1
-        # for item in tokens_regex:
-        #     # subafd = afdLib.createAFD(item)
-        #     # subafd_graph = afLib.plot_af(subafd.start)
-        #     # nombre_archivo_pdf = 'AFD '+str(k)
-        #     # subafd_graph.view(filename=nombre_archivo_pdf,cleanup=True)
-        #     postfix = regexLib.shunting_yard(item)
-            
-        #     #Construccion AST
-        #     ast_root = astLib.create_ast(postfix)
-        #     ast_graph = astLib.plot_tree(ast_root)
-        #     nombre_archivo_pdf = 'Subarbol de Expresion '+str(k)
-        #     ast_graph.view(filename=nombre_archivo_pdf,cleanup=True)
-        #     k+=1
 
-        lexer = '|'.join(tokens_regex)
-        lexer = '('+lexer+')'
+        lexer_regex = '|'.join(tokens_regex)
+        lexer_regex = '('+lexer_regex+')'
 
-        # print(lexer)
-        # print('\n')
-            
-        #Construccion AFD
-        afd = AfdLib.createLexerAFD(lexer,yalexRecognizer.get_rule_tokens())
-        afd.yalex_tokens = set(yalex_tokens)
-        # afd_graph = AfLib.plot_af(afd.start)
-        # nombre_archivo_pdf = 'AFD'
-        # afd_graph.view(filename=nombre_archivo_pdf,cleanup=True)
 
-        # #Construccion de postfix
-        # postfix = regexLib.shunting_yard(lexer)
-            
-        # #Construccion AST
-        # ast_root = astLib.create_ast(postfix)
-        # ast_graph = astLib.plot_tree(ast_root)
-        # nombre_archivo_pdf = 'Arbol de expresion'
-        # ast_graph.view(filename=nombre_archivo_pdf,cleanup=True)
+        #Construccion Lexer
+        lexer = Lexer(AfdLib.createLexerAFD(lexer_regex,yalex_tokens,yalexRecognizer.get_rule_tokens()),set(yalex_tokens))
     
         # Abrimos un archivo en modo binario de escritura
         with open(pklName, 'wb') as archivo_salida:
             # Serializamos el objeto y lo guardamos en el archivo
-            pickle.dump(afd, archivo_salida)
+            pickle.dump(lexer, archivo_salida)
             
         return yalexRecognizer
     else:

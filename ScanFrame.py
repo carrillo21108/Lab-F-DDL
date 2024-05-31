@@ -1,14 +1,18 @@
 #ScanFrame.py
 
-import pickle
 import ScanGenerator
+# import sys
+# import os
+# sys.path.append(os.path.join(os.path.dirname(__file__), '../resources'))
+
 import AfLib
 
 if __name__ == "__main__":
 
-    yalName = input("Ingrese el nombre del archivo yal a reconocer: ")
-    pklName = input("Ingrese el nombre del archivo pkl a generar: ")
-    pyName = input("Ingrese el nombre del archivo py a generar: ")
+    name = input("Ingrese el nombre del archivo yal a reconocer: ")
+    yalName = name+".txt"
+    pklName = name+".pkl"
+    pyName = name+".py"
     res = ScanGenerator.generateLexer(pklName,yalName)
 
     if res:
@@ -21,19 +25,19 @@ if __name__ == "__main__":
 import pickle
 {header}
             
-def step_simulate_AFD(afd,c,lookAhead):
-    res = afd.step_simulation(c, lookAhead)
+def step_simulate_AFD(lexer,c,lookAhead):
+    res = lexer.afd.step_simulation(c, lookAhead)
     state = list(res)[0] if len(list(res))>0 else None
 
-    if state in afd.accept:
-        return (0,state.action)
-    elif state in afd.states:
-        return (1,"")
+    if state in lexer.afd.accept:
+        return (0,state.action,state.token_id)
+    elif state in lexer.afd.states:
+        return (1,"","")
     else:
-        return (2,"")
+        return (2,"","")
             
-def segmentRecognize(afd,i,content):
-    accept = (False,0,"")
+def segmentRecognize(lexer,i,content):
+    accept = (False,0,"","","")
     first = i
     # Bucle hasta que se alcance el final del contenido
     while i <= len(content):  # Asegura que haya espacio para lookAhead
@@ -41,13 +45,14 @@ def segmentRecognize(afd,i,content):
         lookAhead = content[i + 1] if i<len(content)-1 else ""  # Caracter siguiente
         
         # Procesa el caracter aqui
-        res = step_simulate_AFD(afd, char, lookAhead)
+        res = step_simulate_AFD(lexer, char, lookAhead)
         if res[0] == 0:
             last = i+1
-            accept = (True,last,content[first:last],res[1]) #Estado de aceptacion, ultima posicion de lookAhead, contenido aceptado, accion
+            accept = (True,last,content[first:last],res[1],res[2]) #Estado de aceptacion, ultima posicion de lookAhead, contenido aceptado, accion, token_id
         
         elif res[0] == 2:
             if accept[0]:
+                lexer.input_tokens.append(accept[4])
                 return accept
             else:
                 return (False,i,"","")
@@ -78,11 +83,11 @@ def genericFunction(value,content):
         print(f"Error al ejecutar el codigo: {{e}}")
         return None
             
-def tokensRecognize(afd,txtContent):
+def tokensRecognize(lexer,txtContent):
     # Inicializa la posicion
     first = 0
     while first<=len(txtContent):
-        res = segmentRecognize(afd,first,txtContent)
+        res = segmentRecognize(lexer,first,txtContent)
         nextFirst = res[1]
         
         if res[0]:
@@ -113,14 +118,22 @@ def tokensRecognize(afd,txtContent):
 
 #Lectura del objeto pkl
 with open('{pklName}', 'rb') as archivo_entrada:
-    afd = pickle.load(archivo_entrada)
+    lexer = pickle.load(archivo_entrada)
 
 document = input("Ingrese el nombre del archivo a escanear: ")                
 #Lectura del documento txt
-with open(document, 'r', encoding='utf-8') as file:
+with open(document+".txt", 'r', encoding='utf-8') as file:
     txtContent = file.read()  # Leer todo el contenido del archivo
         
-tokensRecognize(afd,txtContent)
+tokensRecognize(lexer,txtContent)
+
+#Actualizacion de input_tokens
+if len(lexer.input_tokens)>0:
+    # Abrimos un archivo en modo binario de escritura
+    with open('{pklName}', 'wb') as archivo_salida:
+        # Serializamos el objeto y lo guardamos en el archivo
+        pickle.dump(lexer, archivo_salida)
+        
 {trailer}
 """
 

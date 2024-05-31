@@ -1,0 +1,22 @@
+{#Diego Franco - 20240}
+
+
+let delim = [' ''\t''\n']
+let ws = delim+
+let letra = ['a'-'z''A'-'Z']
+let digit = (0|1|2|3|4|5|6|7|8|9)
+let id = (letra)(letra|digit)*
+let plus = '+'
+let times = '*'
+let lparen = '('
+let rparen = ')'
+
+rule tokens = 
+  | ws        { print('WHITESPACE') }
+  | plus       { print("SUMA") }
+  | times       { print("POR") }
+  | lparen       { print("LPAREN") }
+  | rparen       { print("RPAREN") }
+  | id       { print("ID") }
+
+{#Diego Franco - 20240}

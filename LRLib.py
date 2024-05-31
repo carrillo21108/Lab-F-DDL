@@ -1,4 +1,5 @@
 ﻿#LRLib.py
+
 import pickle
 from graphviz import Digraph
 from tabulate import tabulate
@@ -383,8 +384,11 @@ def action_transitions(automata,parsing_table,terminals,grammar):
                 for symbol in values:
                     if parsing_table[state.name][symbol] == None:
                         parsing_table[state.name][symbol] = 'r'+str(index)
-                    else:
+                    elif parsing_table[state.name][symbol][0] == 's':
                         print("ERROR: Conflicto shif-reduce en la gramatica")
+                        return False
+                    else:
+                        print("ERROR: Conflicto reduce-reduce en la gramatica")
                         return False
                     
     return True

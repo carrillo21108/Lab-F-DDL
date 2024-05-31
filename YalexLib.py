@@ -127,14 +127,10 @@ class YalexRecognizer:
                 res = self.segmentRecognize(i,first,content)
     
                 if res[0]:
-                    # print("ACEPTADO por " + str(i))
-                    # print(res[2])
                     if len(res[2])>len(longer[2]):
                         longer[0] = i
                         longer[1] = res[1]
                         longer[2] = res[2]
-                # else:
-                #     print("NO ACEPTADO por " + str(i))
         
             if longer[0]==3: #ws
                 pass
@@ -149,14 +145,11 @@ class YalexRecognizer:
                 break
                 
             first = longer[1]
-            #print(longer[0])
-            #input("Presione [Enter] para continuar.")   
         
         self.definitions[definition[0]] = definition[1]
     
     def ruleRecognize(self,content):
         # Inicializa la posición
-        #print(content)
         identifier = []
         first = 0
         while first<=len(content):
@@ -169,14 +162,10 @@ class YalexRecognizer:
                 res = self.segmentRecognize(i,first,content)
     
                 if res[0]:
-                    # print("ACEPTADO por " + str(i))
-                    # print(res[2])
                     if len(res[2])>len(longer[2]):
                         longer[0] = i
                         longer[1] = res[1]
                         longer[2] = res[2]
-                # else:
-                #     print("NO ACEPTADO por " + str(i))
         
             if longer[0]==7: #rule
                 pass
@@ -204,8 +193,6 @@ class YalexRecognizer:
                 break
                 
             first = longer[1]
-            #print(longer[0])
-            #input("Presione [Enter] para continuar.")
     
         #Agregando identificadores o char/string sin return
         for item in identifier:
@@ -213,7 +200,6 @@ class YalexRecognizer:
 
     def valueRecognize(self,new_afdPos,content):
         # Inicializa la posición
-        # print(content)
         token_id = TokenId()
         new_content = ""
         first = 0
@@ -231,14 +217,10 @@ class YalexRecognizer:
                     res = self.segmentRecognize(i,first,content)
     
                     if res[0]:
-                        # print("ACEPTADO por " + str(i))
-                        # print(res[2])
                         if len(res[2])>len(longer[2]):
                             longer[0] = i
                             longer[1] = res[1]
                             longer[2] = res[2]
-                    # else:
-                    #     print("NO ACEPTADO por " + str(i))
         
                 if longer[0]==9: #String
                     if firstIteration:
@@ -262,19 +244,14 @@ class YalexRecognizer:
                         first+=1
 
                 firstIteration = False
-            
-                # print(longer[0])
-                # input("Presione [Enter] para continuar.")
         
             if content!=new_content:
                 first=0
                 content=new_content
                 new_content=""
-                # print("CONTENIDO: "+content)
             else:
                 change = False
                 token_id.setContent(new_content)
-                # print("CONTENIDO: "+content)
             
         return token_id
     
@@ -292,8 +269,6 @@ class YalexRecognizer:
                 res = self.segmentRecognize(i,first,yalexContent)
     
                 if res[0]:
-                    # print("ACEPTADO por " + str(i))
-                    # print(res[2])
                     if len(res[2])>len(longer[2]):
                         longer[0] = i
                         longer[1] = res[1]
@@ -301,7 +276,6 @@ class YalexRecognizer:
                 else:
                     if res[1]>longer_error:
                         longer_error = res[1]
-                    # print("NO ACEPTADO por " + str(i))
     
             if longer[0]==0: #Comentario
                 self.comments.append(longer[2])
@@ -329,7 +303,6 @@ class YalexRecognizer:
                 return False
 
             first = longer[1]
-            # input("Presione [Enter] para continuar.")
             
         return True
             

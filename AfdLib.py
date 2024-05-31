@@ -4,7 +4,6 @@ from AstLib import Node
 import AfLib
 import RegexLib
 import AstLib
-import AfdLib
 
 #Clase de estado de AFD
 class AFDState:
@@ -305,7 +304,7 @@ def createAFD(item):
     
     return afdmin
 
-def createLexerAFD(item,rule_tokens):
+def createLexerAFD(item,yalex_tokens,rule_tokens):
     #Construccion de postfix
     postfix = RegexLib.shunting_yard(item)
             
@@ -321,7 +320,9 @@ def createLexerAFD(item,rule_tokens):
     #Seteo de la accion correspondiente a cada estado de aceptacion del LexerAFD
     #Se considera que accion y # pos se encuentran en el mismo indice
     for state in afd.accept:
-        state.action = list(rule_tokens.values())[uniquePos.index(state.acceptPos)]
+        i = uniquePos.index(state.acceptPos)
+        state.action = list(rule_tokens.values())[i]
+        state.token_id = yalex_tokens[i]
         
     
     return afd

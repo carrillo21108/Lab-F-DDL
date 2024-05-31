@@ -1,8 +1,15 @@
-(* Lexer para YAPar *)
+(* YALex para YAPar *)
 
 {
 grammar = dict()
 yapar_tokens = set()
+ignore_tokens = set()
+
+#Clase Parser
+class Parser:
+    def __init__(self,grammar,input_tokens):
+        self.grammar = grammar
+        self.input_tokens = input_tokens
 }
 
 (* Comentarios *)
@@ -37,7 +44,12 @@ for item in value[6:].split(' '):
 	if item!='':
 		yapar_tokens.add(item)
 }
-  | ignoreDefinition	{ return "IGNOREDEF" }
+  | ignoreDefinition
+{
+for item in value[6:].split(' '):
+	if item!='':
+		ignore_tokens.add(item)
+}
   | productionSection	{ return "PRODSECTION" }
   | production
 {prod = value[:-1].split(':')
@@ -49,7 +61,21 @@ grammar[head] = body
 }
 
 {
-with open('grammar.pkl', 'wb') as archivo_salida:
-        # Serializamos el diccionario y lo guardamos en el archivo
-        pickle.dump(grammar, archivo_salida)
+obj = input("Ingrese el nombre del archivo pkl del archivo yal: ")     
+#Lectura del objeto pkl
+with open(obj+".pkl", 'rb') as archivo_entrada:
+    lexer = pickle.load(archivo_entrada)
+
+diff = yapar_tokens.difference(lexer.yalex_tokens)
+
+if len(diff)==0:
+    if len(lexer.input_tokens)>0:
+        parser = Parser(grammar,[item for item in lexer.input_tokens if item not in ignore_tokens])
+        with open(document+".pkl", 'wb') as archivo_salida:
+            # Serializamos el diccionario y lo guardamos en el archivo
+            pickle.dump(parser, archivo_salida)
+    else:
+        print("Scanner sin TOKENS reconocidos")
+else:
+    print("La definicion de TOKENS en archivo yalp no coinciden con los definidos en archivo yal")
 }
